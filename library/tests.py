@@ -71,3 +71,26 @@ class LoanTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.loan.refresh_from_db()
         self.assertEqual(self.loan.due_date, timezone.now().date() - timedelta(days=15))
+
+
+class BookTest(TestCase):
+    def setUp(self):
+        author = Author.objects.create(
+            first_name="Author1",
+            last_name="Last1"
+        )
+        for i in range(15):
+            Book.objects.create(
+                title = f"Book{i}",
+                author = author,
+                isbn = f"12234{i}",
+                genre = "fiction",
+                available_copies = 1
+            )
+
+    def test_book_list_pagination(self):
+        client = APIClient()
+        response = client.get('/api/books/', {'page_size': 5})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()['results']), 5)
+        self.assertEqual(response.json()['count'], 15)
