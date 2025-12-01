@@ -2,11 +2,12 @@ from datetime import timedelta
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import Author, Book, Member, Loan
-from .serializers import AuthorSerializer, BookSerializer, MemberSerializer, LoanSerializer
+from .serializers import AuthorSerializer, BookSerializer, MemberSerializer, LoanSerializer, TopActiveMembersSerializer
 from rest_framework.decorators import action
 from django.utils import timezone
 from .tasks import send_loan_notification
 from .pagination import BookPagination
+from django.db.models import Count, Q
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
@@ -52,6 +53,12 @@ class BookViewSet(viewsets.ModelViewSet):
 class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
+
+    @action(detail=False, methods=['get'], url_path='top-active')
+    def top_active(self, request):
+        members = Member.objects.annotate(active_loans=Count('loans', filter=Q(loans__is_returned=False))).order_by('-active_loans')[:5]
+        serializer = TopActiveMembersSerializer(members, many=True)
+        return Response(serializer.data)
 
 
 class LoanViewSet(viewsets.ModelViewSet):

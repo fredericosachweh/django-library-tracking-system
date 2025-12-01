@@ -94,3 +94,46 @@ class BookTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()['results']), 5)
         self.assertEqual(response.json()['count'], 15)
+
+
+class MemberTest(TestCase):
+    def setUp(self):
+        for i in range(1, 16):
+            user = User.objects.create(
+                username=f'Test{i}',
+                email=f'test{i}@test{i}'
+            )
+            Member.objects.create(
+                user=user
+            )
+        
+        author = Author.objects.create(
+            first_name="Author1",
+            last_name="Last1"
+        )
+        book = Book.objects.create(
+            title = "Book1",
+            author = author,
+            isbn = "12234",
+            genre = "fiction",
+            available_copies = 10
+        )
+        for i in range(1, 6):
+            Loan.objects.create(
+                book=book,
+                member=Member.objects.get(id=i),
+                due_date=timezone.now().date() + timedelta(days=14)
+            )
+        Loan.objects.create(
+            book=book,
+            member=Member.objects.get(id=1),
+            due_date=timezone.now().date() + timedelta(days=14)
+        )
+
+    def test_top_active_members(self):
+        client = APIClient()
+        response = client.get('/api/members/top-active/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 5)
+        self.assertEqual(response.json()[0]['active_loans'], 2)
+        self.assertEqual(response.json()[1]['active_loans'], 1)

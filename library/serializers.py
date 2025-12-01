@@ -32,6 +32,16 @@ class MemberSerializer(serializers.ModelSerializer):
         model = Member
         fields = ['id', 'user', 'user_id', 'membership_date']
 
+class TopActiveMembersSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), source='user', write_only=True
+    )
+    active_loans = serializers.IntegerField(read_only=True)
+    class Meta:
+        model = Member
+        fields = ['id', 'user', 'user_id', 'membership_date', 'active_loans']
+    
 class LoanSerializer(serializers.ModelSerializer):
     book = BookSerializer(read_only=True)
     book_id = serializers.PrimaryKeyRelatedField(
