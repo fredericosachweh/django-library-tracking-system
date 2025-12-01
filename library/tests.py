@@ -47,3 +47,27 @@ class LoanTest(TestCase):
         kwargs = mock_send_mail.call_args[1]
         self.assertEqual(kwargs["subject"], "Book Loaned with due date expired.")
         self.assertEqual(kwargs["recipient_list"], [self.loan.member.user.email])
+
+    def test_loan_additional_days(self):
+        client = APIClient()
+        response = client.post(f'/api/loans/{self.loan.id}/extend_due_date/', {'additional_days': 10})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        result = response.json()
+        new_due_date = timezone.now().date() + timedelta(days=24)
+        self.assertEqual(result["due_date"], datetime.strftime(new_due_date, '%Y-%m-%d'))
+    
+    def test_loan_additional_days_invalid(self):
+        client = APIClient()
+        response = client.post(f'/api/loans/{self.loan.id}/extend_due_date/', {'additional_days': -1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.due_date, timezone.now().date() + timedelta(days=14))
+    
+    def test_loan_additional_days_expired(self):
+        client = APIClient()
+        self.loan.due_date = timezone.now().date() - timedelta(days=15)
+        self.loan.save()
+        response = client.post(f'/api/loans/{self.loan.id}/extend_due_date/', {'additional_days': 10})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.due_date, timezone.now().date() - timedelta(days=15))
