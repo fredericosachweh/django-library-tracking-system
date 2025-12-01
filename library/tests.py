@@ -1,16 +1,15 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
 from unittest.mock import patch
-
+from rest_framework.test import APIClient
+from rest_framework import status
 from .models import Author, Member, Book, Loan
 from .tasks import check_overdue_loans
 
 
 class LoanTest(TestCase):
-
-    
 
     def setUp(self):
         
@@ -38,14 +37,13 @@ class LoanTest(TestCase):
             due_date=timezone.now().date() + timedelta(days=14)
         )
 
-    @patch('django.core.mail.send_mail')
+    @patch('library.tasks.send_mail')
     def test_check_overdue_loans(self, mock_send_mail):
+        mock_send_mail.return_value = 1
         self.loan.due_date = timezone.now().date() - timedelta(days=15)
         self.loan.save()
         check_overdue_loans()
-        book_title = self.loan.book.title
-        args, kwargs = mock_send_mail.call_args
-        subject = args[0]
-        # Assert that send_mail was called with specific arguments
-        self.assertEqual(subject, f'Hello {self.loan.member.user.username},\n\nYou have loaned "{book_title}".\nPlease return it now.')
-
+        mock_send_mail.assert_called_once()
+        kwargs = mock_send_mail.call_args[1]
+        self.assertEqual(kwargs["subject"], "Book Loaned with due date expired.")
+        self.assertEqual(kwargs["recipient_list"], [self.loan.member.user.email])

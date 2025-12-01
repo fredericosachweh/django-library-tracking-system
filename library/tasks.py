@@ -23,7 +23,7 @@ def send_loan_notification(loan_id):
 
 @shared_task
 def check_overdue_loans():
-    loans = Loan.objects.filter(due_date__lt=timezone.now().date() - timedelta(days=14))
+    loans = Loan.objects.filter(is_returned=False, due_date__lt=timezone.now().date() - timedelta(days=14))
     if loans.exists():
         for loan in loans:
             member_email = loan.member.user.email
