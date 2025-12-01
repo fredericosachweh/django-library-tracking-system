@@ -40,7 +40,7 @@ class TopActiveMembersSerializer(serializers.ModelSerializer):
     active_loans = serializers.IntegerField(read_only=True)
     class Meta:
         model = Member
-        fields = ['id', 'user', 'user_id', 'membership_date', 'active_loans']
+        fields = ['id', 'user', 'active_loans']
     
 class LoanSerializer(serializers.ModelSerializer):
     book = BookSerializer(read_only=True)
